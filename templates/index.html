@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tauqeer Ali Khan Chatbot</title>
+    <style>
+        /* Base Tailwind reset and utility classes used in the HTML */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        /* The Inter Font is still an external resource. For true offline, this should be removed or self-hosted. */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .w-full { width: 100%; }
+        .max-w-lg { max-width: 32rem; }
+        .bg-white { background-color: #fff; }
+        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .rounded-xl { border-radius: 0.75rem; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .h-\[80vh\] { height: 80vh; }
+        .min-h-\[500px\] { min-height: 500px; }
+        .p-4 { padding: 1rem; }
+        .border-b { border-bottom-width: 1px; }
+        .border-t { border-top-width: 1px; }
+        .border-gray-200 { border-color: #e5e7eb; }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .rounded-t-xl { border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .font-bold { font-weight: 700; }
+        .text-gray-800 { color: #1f2937; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-gray-500 { color: #6b7280; }
+        .flex-grow { flex-grow: 1; }
+        .overflow-y-auto { overflow-y: auto; }
+        .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; margin-bottom: 0; }
+        .items-start { align-items: flex-start; }
+        .items-end { align-items: flex-end; }
+        .p-3 { padding: 0.75rem; }
+        .bg-gray-100 { background-color: #f3f4f6; }
+        .rounded-lg { border-radius: 0.5rem; }
+        .max-w-\[85\%\] { max-width: 85%; }
+        .text-gray-700 { color: #374151; }
+        .text-blue-900 { color: #1e3a8a; }
+        .bg-blue-100 { background-color: #dbeafe; }
+        .rounded-tr-none { border-top-right-radius: 0; }
+        .rounded-tl-none { border-top-left-radius: 0; }
+        .whitespace-pre-wrap { white-space: pre-wrap; }
+        .flex-grow { flex-grow: 1; }
+        .space-x-3 > :not([hidden]) ~ :not([hidden]) { margin-right: 0; margin-left: 0.75rem; }
+        .border { border-width: 1px; }
+        .border-gray-300 { border-color: #d1d5db; }
+        .focus\:ring-blue-500:focus { --tw-ring-color: #3b82f6; --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color); }
+        .focus\:border-blue-500:focus { border-color: #3b82f6; }
+        .transition { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+        .duration-150 { transition-duration: 150ms; }
+        .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .bg-blue-600 { background-color: #2563eb; }
+        .text-white { color: #fff; }
+        .font-semibold { font-weight: 600; }
+        .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); }
+        .hover\:bg-blue-700:hover { background-color: #1d4ed8; }
+        .active\:bg-blue-800:active { background-color: #1e40af; }
+        .italic { font-style: italic; }
+
+        /* Added styles for formatted content */
+        .bot-response h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; }
+        .bot-response h2 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; }
+        .bot-response h3 { font-size: 1.125rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; }
+        .bot-response strong { font-weight: 700; }
+        .bot-response ul, .bot-response ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+        .bot-response li { margin: 0.25rem 0; }
+        .bot-response p { margin: 0.5rem 0; }
+
+        /* Custom scrollbar style for the chat area */
+        #chat-window::-webkit-scrollbar { width: 8px; }
+        #chat-window::-webkit-scrollbar-thumb {
+            background-color: #d1d5db; /* gray-300 */
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="w-full max-w-lg bg-white shadow-xl rounded-xl flex flex-col h-[80vh] min-h-[500px]">
+
+        <header class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <h1 class="text-lg font-bold text-gray-800">Professional Chatbot Assistant</h1>
+            <p class="text-sm text-gray-500">Tauqeer Ali Khan</p>
+        </header>
+
+        <div id="chat-window" class="flex-grow p-4 overflow-y-auto space-y-4">
+            <div class="flex flex-col items-start">
+                <p class="font-bold text-gray-800">Bot:</p>
+                <div class="p-3 bg-gray-100 rounded-lg max-w-[85%] text-gray-700">
+                    Hello! I am a chatbot assistant providing information about Tauqeer Ali Khan's Professional Services. How can I assist you?
+                </div>
+            </div>
+            </div>
+
+        <div class="p-4 border-t border-gray-200 flex space-x-3">
+            <input
+                type="text"
+                id="user-input"
+                placeholder="Type a message..."
+                class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+                autocomplete="off"
+            >
+            <button
+                id="send-button"
+                class="px-5 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 active:bg-blue-800"
+            >
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Define the Flask server endpoint
+        const API_ENDPOINT = 'http://127.0.0.1:8000/chat';
+        
+        const sessionID=Math.random().toString(36).substring(2);
+
+        const parseMarkdownToHTML = (text) => {
+            let html = text;
+            
+            // Convert ### Heading 3 to <h3>
+            html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+            
+            // Convert ## Heading 2 to <h2>
+            html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+            
+            // Convert # Heading 1 to <h1>
+            html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+            
+            // Convert **bold** to <strong>
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Convert *italic* to <em>
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Convert bullet points (* item) to <ul><li>
+            const lines = html.split('\n');
+            let inList = false;
+            let result = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const isBulletPoint = /^\s*\*\s+/.test(line);
+                const isNumberedPoint = /^\s*\d+\.\s+/.test(line);
+                
+                if (isBulletPoint || isNumberedPoint) {
+                    if (!inList) {
+                        const listType = isBulletPoint ? 'ul' : 'ol';
+                        result.push(`<${listType}>`);
+                        inList = true;
+                    }
+                    
+                    // Extract the list item text
+                    const itemText = line.replace(/^\s*[\*\d+\.]\s+/, '').trim();
+                    result.push(`<li>${itemText}</li>`);
+                } else {
+                    if (inList) {
+                        const listType = /^<ol>/.test(result[result.length - 1]) ? 'ol' : 'ul';
+                        result.push(`</${listType}>`);
+                        inList = false;
+                    }
+                    
+                    if (line.trim()) {
+                        result.push(`<p>${line}</p>`);
+                    }
+                }
+            }
+            
+            if (inList) {
+                const listType = /^<ol>/.test(result[result.length - 1]) ? 'ol' : 'ul';
+                result.push(`</${listType}>`);
+            }
+            
+            return result.join('\n');
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatWindow = document.getElementById('chat-window');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+
+            // --- Utility Functions ---
+
+            const createMessageElement = (sender) => {
+                const messageContainer = document.createElement('div');
+                messageContainer.classList.add('flex', 'flex-col', 'items-start');
+                
+                const senderLabel = document.createElement('p');
+                senderLabel.classList.add('font-bold', 'text-gray-800');
+                senderLabel.textContent = sender === 'user' ? 'You:' : 'Bot:';
+                
+                const messageBubble = document.createElement('div');
+                messageBubble.classList.add('p-3', 'rounded-lg', 'max-w-[85%]');
+                
+                if (sender === 'user') {
+                    messageContainer.classList.add('items-end');
+                    messageBubble.classList.add('bg-blue-100', 'text-blue-900', 'rounded-tr-none', 'whitespace-pre-wrap');
+                } else {
+                    messageBubble.classList.add('bg-gray-100', 'text-gray-700', 'rounded-tl-none', 'bot-response');
+                    messageBubble.id = 'bot-response-stream';
+                }
+                
+                messageContainer.appendChild(senderLabel);
+                messageContainer.appendChild(messageBubble);
+                chatWindow.appendChild(messageContainer);
+
+                // Scroll to the latest message
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                return messageBubble;
+            };
+
+            const appendText = (element, text) => {
+                // Store accumulated text in a data attribute
+                if (!element.dataset.accumulated) {
+                    element.dataset.accumulated = '';
+                }
+                element.dataset.accumulated += text;
+                
+                // Parse and render the accumulated text as HTML
+                const htmlContent = parseMarkdownToHTML(element.dataset.accumulated);
+                element.innerHTML = htmlContent;
+                
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            };
+
+            // --- New Streaming Function ---
+
+            const streamBotResponse = async (query) => {
+                let botMessageElement = createMessageElement('bot');
+                
+                try {
+                    const response = await fetch(API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            query: query,
+                            session_id: sessionID
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Use a TextDecoder to read the stream
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let done = false;
+
+                    while (!done) {
+                        const { value, done: readerDone } = await reader.read();
+                        done = readerDone;
+                        const chunk = decoder.decode(value);
+                        
+                        // Append the incoming text chunk to the message element
+                        appendText(botMessageElement, chunk);
+                    }
+                } catch (error) {
+                    botMessageElement.innerHTML = `<p>Error: Could not connect to the backend server. Is the Flask app running at ${API_ENDPOINT}?</p>`;
+                    console.error('Streaming error:', error);
+                }
+            };
+
+            // --- Event Handler ---
+
+            const handleSend = async () => {
+                const query = userInput.value.trim();
+                if (query === '') return;
+
+                // 1. Display User Message
+                createMessageElement('user'); // Creates the user bubble
+                const lastUserBubble = chatWindow.lastElementChild.querySelector('div:last-child');
+                lastUserBubble.textContent = query;
+                userInput.value = '';
+                
+                sendButton.disabled = true;
+
+                // 2. Display 'Bot is typing...' (This now acts as a loading state)
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.classList.add('flex', 'flex-col', 'items-start', 'text-sm', 'italic', 'text-gray-500');
+                typingIndicator.innerHTML = '<p class="font-bold text-gray-800">Bot:</p><span>... is generating response</span>';
+                chatWindow.appendChild(typingIndicator);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+
+                // 3. Call the actual streaming endpoint
+                await streamBotResponse(query);
+
+                // 4. Cleanup
+                const finalBotResponse = chatWindow.querySelector('#bot-response-stream');
+                if (finalBotResponse) {
+                    finalBotResponse.removeAttribute('id'); // Remove temporary ID after streaming
+                }
+                
+                typingIndicator.remove();
+                sendButton.disabled = false;
+                userInput.focus();
+            };
+            
+            sendButton.addEventListener('click', handleSend);
+
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSend();
+                }
+            });
+            
+            // Focus on input when loaded
+            userInput.focus();
+        });
+    </script>
+
+</body>
+</html>
