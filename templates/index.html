@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tauqeer Ali Khan Chatbot</title>
     <style>
-        /* Base Tailwind reset and utility classes used in the HTML */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-        /* The Inter Font is still an external resource. For true offline, this should be removed or self-hosted. */
+        /* Base Styling & Utility Classes (from your original file) */
+        /* Note: For simplicity and self-containment, I've kept a curated list of utility-style CSS */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7f7f7;
@@ -53,7 +51,6 @@
         .rounded-tr-none { border-top-right-radius: 0; }
         .rounded-tl-none { border-top-left-radius: 0; }
         .whitespace-pre-wrap { white-space: pre-wrap; }
-        .flex-grow { flex-grow: 1; }
         .space-x-3 > :not([hidden]) ~ :not([hidden]) { margin-right: 0; margin-left: 0.75rem; }
         .border { border-width: 1px; }
         .border-gray-300 { border-color: #d1d5db; }
@@ -71,7 +68,7 @@
         .active\:bg-blue-800:active { background-color: #1e40af; }
         .italic { font-style: italic; }
 
-        /* Added styles for formatted content */
+        /* Styles for Markdown formatting */
         .bot-response h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; }
         .bot-response h2 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; }
         .bot-response h3 { font-size: 1.125rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; }
@@ -85,6 +82,50 @@
         #chat-window::-webkit-scrollbar-thumb {
             background-color: #d1d5db; /* gray-300 */
             border-radius: 4px;
+        }
+        
+        /* --- NEW: Loading Indicator CSS for .dot-flashing --- */
+        .dot-flashing {
+            position: relative;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #3b82f6; /* blue-600 */
+            color: #3b82f6;
+            animation: dotFlashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+            display: inline-block;
+        }
+
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            animation: dotFlashing 1s infinite linear alternate;
+        }
+
+        .dot-flashing::before {
+            left: -12px;
+            animation-delay: 0s;
+        }
+
+        .dot-flashing::after {
+            left: 12px;
+            animation-delay: 1s;
+        }
+
+        @keyframes dotFlashing {
+            0% {
+                background-color: #3b82f6;
+            }
+            50%, 100% {
+                background-color: #bfdbfe; /* blue-200 */
+            }
         }
     </style>
 </head>
@@ -127,7 +168,9 @@
         // Define the Flask server endpoint
         const API_ENDPOINT = 'http://127.0.0.1:8000/chat';
         
-        const sessionID=Math.random().toString(36).substring(2);
+        // Corrected session ID generation for robustness
+        const sessionID = sessionStorage.getItem('chat_session_id') || crypto.randomUUID();
+        sessionStorage.setItem('chat_session_id', sessionID);
 
         const parseMarkdownToHTML = (text) => {
             let html = text;
@@ -150,6 +193,7 @@
             // Convert bullet points (* item) to <ul><li>
             const lines = html.split('\n');
             let inList = false;
+            let listType = '';
             let result = [];
             
             for (let i = 0; i < lines.length; i++) {
@@ -159,7 +203,7 @@
                 
                 if (isBulletPoint || isNumberedPoint) {
                     if (!inList) {
-                        const listType = isBulletPoint ? 'ul' : 'ol';
+                        listType = isBulletPoint ? 'ul' : 'ol';
                         result.push(`<${listType}>`);
                         inList = true;
                     }
@@ -169,9 +213,9 @@
                     result.push(`<li>${itemText}</li>`);
                 } else {
                     if (inList) {
-                        const listType = /^<ol>/.test(result[result.length - 1]) ? 'ol' : 'ul';
                         result.push(`</${listType}>`);
                         inList = false;
+                        listType = '';
                     }
                     
                     if (line.trim()) {
@@ -181,7 +225,6 @@
             }
             
             if (inList) {
-                const listType = /^<ol>/.test(result[result.length - 1]) ? 'ol' : 'ul';
                 result.push(`</${listType}>`);
             }
             
@@ -241,7 +284,9 @@
 
             const streamBotResponse = async (query) => {
                 let botMessageElement = createMessageElement('bot');
-                
+                // Insert the loading animation immediately
+                botMessageElement.innerHTML = '<span class="dot-flashing"></span>';
+
                 try {
                     const response = await fetch(API_ENDPOINT, {
                         method: 'POST',
@@ -262,6 +307,10 @@
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let done = false;
+                    
+                    // Clear the loading indicator once streaming begins
+                    botMessageElement.innerHTML = '';
+                    botMessageElement.dataset.accumulated = ''; // Reset accumulated text
 
                     while (!done) {
                         const { value, done: readerDone } = await reader.read();
@@ -272,7 +321,9 @@
                         appendText(botMessageElement, chunk);
                     }
                 } catch (error) {
+                    // Remove loading indicator and show error
                     botMessageElement.innerHTML = `<p>Error: Could not connect to the backend server. Is the Flask app running at ${API_ENDPOINT}?</p>`;
+                    botMessageElement.style.backgroundColor = '#fecaca'; // Red-200 color
                     console.error('Streaming error:', error);
                 }
             };
@@ -291,14 +342,10 @@
                 
                 sendButton.disabled = true;
 
-                // 2. Display 'Bot is typing...' (This now acts as a loading state)
-                const typingIndicator = document.createElement('div');
-                typingIndicator.id = 'typing-indicator';
-                typingIndicator.classList.add('flex', 'flex-col', 'items-start', 'text-sm', 'italic', 'text-gray-500');
-                typingIndicator.innerHTML = '<p class="font-bold text-gray-800">Bot:</p><span>... is generating response</span>';
-                chatWindow.appendChild(typingIndicator);
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-
+                // 2. Remove old typing indicator if it exists (the new logic uses the dot-flashing inside the bubble)
+                const oldTypingIndicator = document.getElementById('typing-indicator');
+                if (oldTypingIndicator) oldTypingIndicator.remove();
+                
                 // 3. Call the actual streaming endpoint
                 await streamBotResponse(query);
 
@@ -308,7 +355,6 @@
                     finalBotResponse.removeAttribute('id'); // Remove temporary ID after streaming
                 }
                 
-                typingIndicator.remove();
                 sendButton.disabled = false;
                 userInput.focus();
             };

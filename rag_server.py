@@ -1,7 +1,11 @@
 from flask import Flask, request, jsonify, Response, render_template
+from flask_cors import CORS # Import CORS
 from app import chat
 
 app = Flask(__name__)
+
+# Configure CORS to explicitly allow requests from the React frontend running on port 8080.
+CORS(app, origins=["http://localhost:8080", "http://127.0.0.1:8080"])
 
 @app.route('/')
 def index():
