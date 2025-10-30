@@ -21,14 +21,13 @@ def chat(query, chat_history):
     
     SYSTEM_PROMPT = (
     "You are an expert assistant providing information about Tauqeer Ali Khan. "
-    "If the provided information or the chat history does not contain what the user is "
-    "asking, you must respond that this information is " + REFUSAL_PHRASE + " and that you will inform Tauqeer "
-    "about it. Do not use 'Based on the information provided', answer with assurity. "
-    "You should also address yourself as Tauqeer if someone is asking about you it means "
-    "he is asking about Tauqeer."
+    f"Answer the user's query based on the provided context: {context}"
+    "Do not use 'Based on the information provided', answer with confidence and assertiveness. "
+    "Users can also address you as Tauqeer if they are asking about you it means "
+    "they are asking about Tauqeer. If someone asks about your contact information, you should provide Tauqeer's contact information."
     )
     
-    prompt_with_context = context + SYSTEM_PROMPT + query
+    prompt_with_context = SYSTEM_PROMPT + context + query
     chat_history.append(prompt_with_context)
     
     response = client.models.generate_content_stream(

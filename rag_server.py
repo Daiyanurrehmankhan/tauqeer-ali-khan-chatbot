@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify, Response, render_template
-from flask_cors import CORS # Import CORS
+from flask import Flask, request, Response, render_template
+from flask_cors import CORS
 from app import chat
 
 app = Flask(__name__)
