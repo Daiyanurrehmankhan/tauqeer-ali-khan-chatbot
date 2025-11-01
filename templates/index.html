@@ -6,7 +6,6 @@
     <title>Tauqeer Ali Khan Chatbot</title>
     <style>
         /* Base Styling & Utility Classes (from your original file) */
-        /* Note: For simplicity and self-containment, I've kept a curated list of utility-style CSS */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7f7f7;
@@ -84,7 +83,7 @@
             border-radius: 4px;
         }
         
-        /* --- NEW: Loading Indicator CSS for .dot-flashing --- */
+        /* --- Loading Indicator CSS for .dot-flashing --- */
         .dot-flashing {
             position: relative;
             width: 6px;
@@ -127,6 +126,52 @@
                 background-color: #bfdbfe; /* blue-200 */
             }
         }
+
+        /* --- Microphone Button Styling --- */
+        .mic-button {
+            background-color: #dc2626; /* red-600 */
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 1.25rem; /* Larger icon */
+            line-height: 1;
+            transition: background-color 150ms;
+            flex-shrink: 0; /* Prevents it from shrinking */
+        }
+        .mic-button:hover {
+            background-color: #b91c1c; /* red-700 */
+        }
+        .mic-button.listening {
+            background-color: #ef4444; /* red-500, a lighter shade to indicate active state */
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); /* Glowing effect */
+        }
+
+        /* --- NEW: Mute Button Styling --- */
+        .mute-button {
+            background-color: #d1d5db; /* gray-300 */
+            color: #1f2937; /* gray-800 */
+            border: none;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 150ms;
+            margin-left: 0.75rem;
+        }
+        .mute-button:hover {
+            background-color: #9ca3af; /* gray-400 */
+        }
+
+        /* Adjust header layout to accommodate the button */
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title-group {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -134,9 +179,20 @@
     <div class="w-full max-w-lg bg-white shadow-xl rounded-xl flex flex-col h-[80vh] min-h-[500px]">
 
         <header class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <h1 class="text-lg font-bold text-gray-800">Professional Chatbot Assistant</h1>
-            <p class="text-sm text-gray-500">Tauqeer Ali Khan</p>
-        </header>
+            <div class="header-content">
+                <div class="header-title-group">
+                    <h1 class="text-lg font-bold text-gray-800">Professional Chatbot Assistant</h1>
+                    <p class="text-sm text-gray-500">Tauqeer Ali Khan</p>
+                </div>
+                <button
+                    id="mute-button"
+                    class="mute-button"
+                    title="Toggle Text-to-Speech"
+                >
+                    🔊
+                </button>
+            </div>
+            </header>
 
         <div id="chat-window" class="flex-grow p-4 overflow-y-auto space-y-4">
             <div class="flex flex-col items-start">
@@ -151,10 +207,17 @@
             <input
                 type="text"
                 id="user-input"
-                placeholder="Type a message..."
+                placeholder="Type a message or press the mic button..."
                 class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 autocomplete="off"
             >
+            <button
+                id="mic-button"
+                class="mic-button shadow-md transition duration-150"
+                title="Voice Input"
+            >
+                🎙️
+            </button>
             <button
                 id="send-button"
                 class="px-5 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 active:bg-blue-800"
@@ -171,8 +234,22 @@
         // Corrected session ID generation for robustness
         const sessionID = sessionStorage.getItem('chat_session_id') || crypto.randomUUID();
         sessionStorage.setItem('chat_session_id', sessionID);
-
+    
+        // --- NEW GLOBAL STATE VARIABLE ---
+        let isMuted = false;
+        // ---------------------------------
+        
+        // Function to detect if the text is predominantly Urdu (Arabic/Persian script)
+        // This script check is what determines if we use the ur-PK voice.
+        const isUrdu = (text) => {
+            // Check for common Urdu/Arabic characters 
+            // Note: The model's response in Urdu should use these characters, not Roman Urdu.
+            const urduRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+            return urduRegex.test(text);
+        };
+    
         const parseMarkdownToHTML = (text) => {
+            // ... (Keep parseMarkdownToHTML function the same)
             let html = text;
             
             // Convert ### Heading 3 to <h3>
@@ -218,7 +295,8 @@
                         listType = '';
                     }
                     
-                    if (line.trim()) {
+                    // Handle paragraphs (ignoring empty lines resulting from markdown replacements)
+                    if (line.trim() && !line.startsWith('<h')) { 
                         result.push(`<p>${line}</p>`);
                     }
                 }
@@ -230,14 +308,16 @@
             
             return result.join('\n');
         };
-
+    
         document.addEventListener('DOMContentLoaded', () => {
             const chatWindow = document.getElementById('chat-window');
             const userInput = document.getElementById('user-input');
             const sendButton = document.getElementById('send-button');
-
+            const micButton = document.getElementById('mic-button');
+            const muteButton = document.getElementById('mute-button'); 
+    
             // --- Utility Functions ---
-
+    
             const createMessageElement = (sender) => {
                 const messageContainer = document.createElement('div');
                 messageContainer.classList.add('flex', 'flex-col', 'items-start');
@@ -260,12 +340,12 @@
                 messageContainer.appendChild(senderLabel);
                 messageContainer.appendChild(messageBubble);
                 chatWindow.appendChild(messageContainer);
-
+    
                 // Scroll to the latest message
                 chatWindow.scrollTop = chatWindow.scrollHeight;
                 return messageBubble;
             };
-
+    
             const appendText = (element, text) => {
                 // Store accumulated text in a data attribute
                 if (!element.dataset.accumulated) {
@@ -279,14 +359,79 @@
                 
                 chatWindow.scrollTop = chatWindow.scrollHeight;
             };
-
+    
+            // --- Text-to-Speech Function (FINAL ROBUST VERSION) ---
+            const speakText = (text) => {
+                if (!('speechSynthesis' in window)) {
+                    console.warn("Text-to-Speech not supported in this browser.");
+                    return;
+                }
+    
+                // Check MUTE STATE
+                if (isMuted) {
+                    return; 
+                }
+                
+                window.speechSynthesis.cancel(); 
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0; 
+                
+                const voices = window.speechSynthesis.getVoices();
+                
+                let targetLang = 'en-US'; // Default
+                let preferredVoice = null;
+                
+                // 1. Determine if the text is in the Urdu script
+                if (isUrdu(text)) {
+                    targetLang = 'ur-PK'; 
+                    
+                    // Look for ur-PK or any ur- voice
+                    preferredVoice = voices.find(v => v.lang === 'ur-PK' || v.lang.startsWith('ur-'));
+                    
+                    // Fallback to related languages (Hindi/Arabic)
+                    if (!preferredVoice) {
+                        preferredVoice = voices.find(v => v.lang.startsWith('hi') || v.lang.startsWith('ar'));
+                    }
+                } else {
+                    // English or Roman Urdu
+                    targetLang = 'en-US';
+                    preferredVoice = voices.find(v => v.lang === 'en-US');
+                }
+                
+                // Assign the language and voice
+                utterance.lang = targetLang;
+                
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                    console.log(`TTS: Found and using voice: ${preferredVoice.name} (${preferredVoice.lang})`);
+                } else {
+                    console.warn(`TTS: Could not find a specific voice for ${targetLang}. Using browser default.`);
+                }
+    
+                // CRITICAL STEP 2: Pre-process the final text to be spoken
+                // This replaces English punctuation with Urdu-compatible equivalents 
+                // or just cleans up the text, which sometimes helps the voice engine.
+                let cleanText = text.replace(/([,;:\.])/g, ' '); // Replace common English punctuation with space
+                
+                // If we are using the Urdu voice, we set the final text to the cleaned version
+                // This is primarily to prevent the silent skipping behavior.
+                if (targetLang === 'ur-PK') {
+                     utterance.text = cleanText;
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            };
+            // --- END Text-to-Speech Function ---
+                
             // --- New Streaming Function ---
-
+    
             const streamBotResponse = async (query) => {
                 let botMessageElement = createMessageElement('bot');
-                // Insert the loading animation immediately
                 botMessageElement.innerHTML = '<span class="dot-flashing"></span>';
-
+    
+                let finalResponseText = ''; 
+    
                 try {
                     const response = await fetch(API_ENDPOINT, {
                         method: 'POST',
@@ -298,76 +443,166 @@
                             session_id: sessionID
                         })
                     });
-
+    
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-
-                    // Use a TextDecoder to read the stream
+    
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let done = false;
                     
-                    // Clear the loading indicator once streaming begins
                     botMessageElement.innerHTML = '';
-                    botMessageElement.dataset.accumulated = ''; // Reset accumulated text
-
+                    botMessageElement.dataset.accumulated = ''; 
+    
                     while (!done) {
                         const { value, done: readerDone } = await reader.read();
                         done = readerDone;
                         const chunk = decoder.decode(value);
                         
-                        // Append the incoming text chunk to the message element
                         appendText(botMessageElement, chunk);
+                        finalResponseText += chunk;
                     }
+                    
+                    // --- TTS Activation (Uses updated speakText) ---
+                    if (finalResponseText.trim()) {
+                        speakText(finalResponseText.trim());
+                    }
+    
                 } catch (error) {
-                    // Remove loading indicator and show error
+                    // Stop speech if an error occurs
+                    window.speechSynthesis.cancel(); 
                     botMessageElement.innerHTML = `<p>Error: Could not connect to the backend server. Is the Flask app running at ${API_ENDPOINT}?</p>`;
-                    botMessageElement.style.backgroundColor = '#fecaca'; // Red-200 color
+                    botMessageElement.style.backgroundColor = '#fecaca'; 
                     console.error('Streaming error:', error);
                 }
             };
-
+    
             // --- Event Handler ---
-
+    
             const handleSend = async () => {
                 const query = userInput.value.trim();
                 if (query === '') return;
-
+    
                 // 1. Display User Message
-                createMessageElement('user'); // Creates the user bubble
+                createMessageElement('user'); 
                 const lastUserBubble = chatWindow.lastElementChild.querySelector('div:last-child');
                 lastUserBubble.textContent = query;
                 userInput.value = '';
                 
                 sendButton.disabled = true;
-
-                // 2. Remove old typing indicator if it exists (the new logic uses the dot-flashing inside the bubble)
-                const oldTypingIndicator = document.getElementById('typing-indicator');
-                if (oldTypingIndicator) oldTypingIndicator.remove();
-                
+                micButton.disabled = true; 
+    
+                // 2. Stop any ongoing speech
+                window.speechSynthesis.cancel();
+    
                 // 3. Call the actual streaming endpoint
                 await streamBotResponse(query);
-
+    
                 // 4. Cleanup
                 const finalBotResponse = chatWindow.querySelector('#bot-response-stream');
                 if (finalBotResponse) {
-                    finalBotResponse.removeAttribute('id'); // Remove temporary ID after streaming
+                    finalBotResponse.removeAttribute('id'); 
                 }
                 
                 sendButton.disabled = false;
+                micButton.disabled = false; 
                 userInput.focus();
             };
             
             sendButton.addEventListener('click', handleSend);
-
+    
             userInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     handleSend();
                 }
             });
             
-            // Focus on input when loaded
+            // --- NEW: Mute Button Logic ---
+            muteButton.addEventListener('click', () => {
+                isMuted = !isMuted; // Toggle the state
+                
+                if (isMuted) {
+                    muteButton.textContent = '🔇'; // Muted icon
+                    muteButton.title = 'Text-to-Speech is Muted (Click to Unmute)';
+                    window.speechSynthesis.cancel(); // Immediately stop any ongoing speech
+                } else {
+                    muteButton.textContent = '🔊'; // Unmuted icon
+                    muteButton.title = 'Text-to-Speech is Unmuted (Click to Mute)';
+                }
+            });
+            // --- END Mute Button Logic ---
+    
+            // --- Speech Recognition Logic (Unchanged but included for completeness) ---
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+            let isListening = false;
+            let userSpoke = false;
+    
+            if (recognition) {
+                recognition.continuous = false;
+                recognition.lang = 'en-US';
+    
+                recognition.onstart = () => {
+                    isListening = true;
+                    micButton.classList.add('listening');
+                    micButton.textContent = '🛑';
+                    userInput.placeholder = "Listening... Speak now.";
+                    userInput.disabled = true;
+                    sendButton.disabled = true;
+                };
+    
+                recognition.onresult = (event) => {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+                    
+                    userInput.value = transcript;
+                    userSpoke = true;
+                };
+    
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'no-speech') {
+                        userInput.placeholder = "Didn't catch that. Tap to try again.";
+                    } else if (event.error !== 'aborted') {
+                            userInput.value = `Error: ${event.error}`;
+                    }
+                };
+    
+                recognition.onend = () => {
+                    isListening = false;
+                    micButton.classList.remove('listening');
+                    micButton.textContent = '🎙️';
+                    userInput.placeholder = "Type a message or press the mic button...";
+                    userInput.disabled = false;
+                    sendButton.disabled = false;
+                    
+                    if (userSpoke && userInput.value.trim() !== '') {
+                        handleSend();
+                    }
+                    userSpoke = false;
+                };
+    
+                micButton.addEventListener('click', () => {
+                    // Cancel ongoing speech if user starts talking
+                    window.speechSynthesis.cancel();
+                    
+                    if (isListening) {
+                        recognition.stop();
+                    } else {
+                        userInput.value = ''; 
+                        recognition.start();
+                    }
+                });
+            } else {
+                micButton.disabled = true;
+                micButton.title = 'Speech Recognition not supported in this browser.';
+                micButton.textContent = '❌';
+                console.error("Web Speech API (Speech Recognition) not supported in this browser.");
+            }
+            
             userInput.focus();
         });
     </script>

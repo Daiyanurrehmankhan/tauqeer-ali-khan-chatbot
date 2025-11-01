@@ -53,7 +53,6 @@ def process_image_to_document(file_path: str, client: genai.Client):
         mime_type = f"image/{os.path.splitext(file_path)[1].lstrip('.')}"
         
         prompt = (
-            f"Analyze this image from the data folder, which relates to Tauqeer Ali Khan's profile or projects. "
             f"Provide a concise, detailed, and professional summary of the image content, "
             f"focusing on technical aspects, themes, or implied skills. "
             f"Do not include phrases like 'Based on the image'."
@@ -90,6 +89,16 @@ def generate_chunk_id(chunk_content: str, source_path: str, chunk_index: int) ->
     return hashlib.sha256(unique_key.encode('utf-8')).hexdigest()
 
 # Function to load and prepare documents with stable IDs (REFACTORED for multimodal)
+# rag_working.py
+
+# ... (keep all imports and configuration the same)
+
+# Function to load and prepare documents with stable IDs (REFACTORED for multimodal)
+# rag_working.py (Complete updated function)
+
+# ... (keep all imports and configuration the same)
+
+# Function to load and prepare documents with stable IDs (REFACTORED for multimodal)
 def load_and_prepare_documents():
     all_files = glob("data/*")
     documents = []
@@ -112,22 +121,46 @@ def load_and_prepare_documents():
         
         if loader:
             try:
-                documents.extend(loader.load())
+                loaded_docs = loader.load()
+                
+                # --- FILTER DOCUMENTS IMMEDIATELY AFTER LOADING ---
+                # Check for documents that contain non-empty, non-whitespace content
+                valid_loaded_docs = [
+                    doc for doc in loaded_docs if doc.page_content and doc.page_content.strip()
+                ]
+                if len(loaded_docs) > len(valid_loaded_docs):
+                     print(f"⚠️ Warning: Skipped {len(loaded_docs) - len(valid_loaded_docs)} empty pages from {file_path}")
+                     
+                documents.extend(valid_loaded_docs)
+                # --- END FILTER ---
+
             except Exception as e:
                 print(f"Error loading {file_path}: {e}")
 
     # Split documents into manageable chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=350, chunk_overlap=70)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = text_splitter.split_documents(documents)
     
-    # Generate stable IDs for all chunks
+    # --- CRITICAL FIX: Filter out chunks that are too short/fragmented ---
+    MIN_CHUNK_LENGTH = 30  # Chunks shorter than this are likely TOC noise
+
+    non_empty_chunks = [
+        chunk for chunk in chunks 
+        if chunk.page_content and len(chunk.page_content.strip()) >= MIN_CHUNK_LENGTH
+    ]
+    
+    if len(chunks) > len(non_empty_chunks):
+         print(f"Cleaned {len(chunks) - len(non_empty_chunks)} small chunks before embedding.")
+    # --- END CRITICAL FIX ---
+    
+    # Generate stable IDs for all non-empty chunks
     chunk_ids = []
-    for i, chunk in enumerate(chunks):
+    for i, chunk in enumerate(non_empty_chunks):
         source_path = chunk.metadata.get('source', f"unknown_source_{i}")
         chunk_id = generate_chunk_id(chunk.page_content, source_path, i)
         chunk_ids.append(chunk_id)
         
-    return chunks, chunk_ids
+    return non_empty_chunks, chunk_ids
 
 # --- Core Database Operations (Kept Separate for Execution Control) ---
 
@@ -214,7 +247,7 @@ def get_response(query):
     # --- END QUERY REWRITING LOGIC ---
 
     # Retrieve the top 5 most relevant documents
-    docs = vectorstore.similarity_search(query_for_retrieval, k=5) 
+    docs = vectorstore.similarity_search(query_for_retrieval, k=10)
     
     context = "\n---\n".join([doc.page_content for doc in docs])
     
