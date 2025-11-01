@@ -190,21 +190,31 @@ if __name__ == "__main__":
         
     print("\n--- RAG Indexing Process Complete ---")
     print(f"Database status: {CHROMA_DB_PATH} is now ready for use.")
-
-
+    
 # Function to perform RAG retrieval (uses the globally assigned 'vectorstore')
 def get_response(query):
-    # FIX: Move global declaration to the very top of the function
     global vectorstore
     
-    # This check is safer if running independently, but assume global 'vectorstore' is loaded.
     if vectorstore is None:
         try:
             vectorstore = load_existing_vectorstore()
         except Exception:
             raise Exception("Vector store is not initialized. Please run rag_working.py directly once to index data.")
         
-    docs = vectorstore.similarity_search(query, k=5)
+    # --- QUERY REWRITING LOGIC ---
+    original_query = query.lower()
+    
+    # Check for generic contact info queries and augment them
+    if "contact" in original_query:
+        print(f"DEBUG: Rewriting query '{query}' to include 'Tauqeer Ali Khan'.")
+        # Augment the query to include the explicit name for better retrieval
+        query_for_retrieval = f"Tauqeer Ali Khan's {query}" 
+    else:
+        query_for_retrieval = query
+    # --- END QUERY REWRITING LOGIC ---
+
+    # Retrieve the top 5 most relevant documents
+    docs = vectorstore.similarity_search(query_for_retrieval, k=5) 
     
     context = "\n---\n".join([doc.page_content for doc in docs])
     
