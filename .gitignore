@@ -1,0 +1,41 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+# Standard .gitignore rules for Python/Flask projects
+
+### Dependencies & Environment ###
+
+# Virtual environment folder (e.g., created by Python's 'venv' or 'virtualenv')
+# This should NOT be committed, as other users should create their own.
+.venv/
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# pip-installed packages
+*.egg-info/
+.eggs/
+
+### Security & Credentials ###
+
+# Critical: Never commit files containing API keys or sensitive settings.
+# MUST list files like .env to prevent accidental public disclosure.
+.env
+.flaskenv
+secrets.json
+
+### Operating System & Editor Files ###
+
+.DS_Store # macOS system files
+.idea/    # JetBrains IDEs (PyCharm, IntelliJ)
+*.swp     # Vim swap files
+*~        # Temporary files
+
+### Data Files ###
+
+# Commonly used for temporary data or local testing files
+# Adjust this rule based on your project's specific data directory structure.
+data/
