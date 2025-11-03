@@ -235,21 +235,13 @@
         const sessionID = sessionStorage.getItem('chat_session_id') || crypto.randomUUID();
         sessionStorage.setItem('chat_session_id', sessionID);
     
-        // --- NEW GLOBAL STATE VARIABLE ---
+        // --- GLOBAL STATE VARIABLE ---
         let isMuted = false;
         // ---------------------------------
         
-        // Function to detect if the text is predominantly Urdu (Arabic/Persian script)
-        // This script check is what determines if we use the ur-PK voice.
-        const isUrdu = (text) => {
-            // Check for common Urdu/Arabic characters 
-            // Note: The model's response in Urdu should use these characters, not Roman Urdu.
-            const urduRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
-            return urduRegex.test(text);
-        };
+        // REMOVED: isUrdu function (no longer needed)
     
         const parseMarkdownToHTML = (text) => {
-            // ... (Keep parseMarkdownToHTML function the same)
             let html = text;
             
             // Convert ### Heading 3 to <h3>
@@ -360,7 +352,7 @@
                 chatWindow.scrollTop = chatWindow.scrollHeight;
             };
     
-            // --- Text-to-Speech Function (FINAL ROBUST VERSION) ---
+            // --- Text-to-Speech Function (SIMPLIFIED TO ENGLISH ONLY) ---
             const speakText = (text) => {
                 if (!('speechSynthesis' in window)) {
                     console.warn("Text-to-Speech not supported in this browser.");
@@ -372,57 +364,27 @@
                     return; 
                 }
                 
+                // Stop any ongoing speech
                 window.speechSynthesis.cancel(); 
                 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = 1.0; 
                 
+                // Explicitly set language to English and try to find an English voice
+                utterance.lang = 'en-US'; 
                 const voices = window.speechSynthesis.getVoices();
-                
-                let targetLang = 'en-US'; // Default
-                let preferredVoice = null;
-                
-                // 1. Determine if the text is in the Urdu script
-                if (isUrdu(text)) {
-                    targetLang = 'ur-PK'; 
-                    
-                    // Look for ur-PK or any ur- voice
-                    preferredVoice = voices.find(v => v.lang === 'ur-PK' || v.lang.startsWith('ur-'));
-                    
-                    // Fallback to related languages (Hindi/Arabic)
-                    if (!preferredVoice) {
-                        preferredVoice = voices.find(v => v.lang.startsWith('hi') || v.lang.startsWith('ar'));
-                    }
-                } else {
-                    // English or Roman Urdu
-                    targetLang = 'en-US';
-                    preferredVoice = voices.find(v => v.lang === 'en-US');
-                }
-                
-                // Assign the language and voice
-                utterance.lang = targetLang;
-                
+                const preferredVoice = voices.find(v => v.lang.startsWith('en'));
+    
                 if (preferredVoice) {
                     utterance.voice = preferredVoice;
-                    console.log(`TTS: Found and using voice: ${preferredVoice.name} (${preferredVoice.lang})`);
+                    console.log(`TTS: Using English voice: ${preferredVoice.name}`);
                 } else {
-                    console.warn(`TTS: Could not find a specific voice for ${targetLang}. Using browser default.`);
+                    console.warn(`TTS: Could not find a specific English voice. Using browser default.`);
                 }
     
-                // CRITICAL STEP 2: Pre-process the final text to be spoken
-                // This replaces English punctuation with Urdu-compatible equivalents 
-                // or just cleans up the text, which sometimes helps the voice engine.
-                let cleanText = text.replace(/([,;:\.])/g, ' '); // Replace common English punctuation with space
-                
-                // If we are using the Urdu voice, we set the final text to the cleaned version
-                // This is primarily to prevent the silent skipping behavior.
-                if (targetLang === 'ur-PK') {
-                     utterance.text = cleanText;
-                }
-                
                 window.speechSynthesis.speak(utterance);
             };
-            // --- END Text-to-Speech Function ---
+            // --- END SIMPLIFIED TTS FUNCTION ---
                 
             // --- New Streaming Function ---
     
@@ -518,14 +480,14 @@
                 }
             });
             
-            // --- NEW: Mute Button Logic ---
+            // --- Mute Button Logic (Updated to use cancel) ---
             muteButton.addEventListener('click', () => {
                 isMuted = !isMuted; // Toggle the state
                 
                 if (isMuted) {
                     muteButton.textContent = '🔇'; // Muted icon
                     muteButton.title = 'Text-to-Speech is Muted (Click to Unmute)';
-                    window.speechSynthesis.cancel(); // Immediately stop any ongoing speech
+                    window.speechSynthesis.cancel(); // Stop audio immediately
                 } else {
                     muteButton.textContent = '🔊'; // Unmuted icon
                     muteButton.title = 'Text-to-Speech is Unmuted (Click to Mute)';
@@ -586,8 +548,7 @@
                 };
     
                 micButton.addEventListener('click', () => {
-                    // Cancel ongoing speech if user starts talking
-                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.cancel(); // Stop speech immediately
                     
                     if (isListening) {
                         recognition.stop();
