@@ -4,12 +4,12 @@ import hashlib
 import base64
 from glob import glob
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_community.document_loaders import TextLoader, PyPDFLoader # Added PyPDFLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from dotenv import load_dotenv
 from google import genai
-from langchain.docstore.document import Document # Import Document class
+from langchain.docstore.document import Document
 
 # Suppress low-level warnings from Google/absl libraries
 logging.getLogger().setLevel(logging.ERROR)
@@ -19,7 +19,7 @@ load_dotenv()
 # --- Configuration ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 CHROMA_DB_PATH = "./chroma_db"
-COLLECTION_NAME = "tauqeer_profile"
+COLLECTION_NAME = "Book_Islam_The_Religion"
 # --- End Configuration ---
 
 embeddings = GoogleGenerativeAIEmbeddings(
@@ -36,7 +36,7 @@ except Exception:
     gemini_client = None
 
 
-# New utility function to process images via the Gemini API
+# Utility function to process images via the Gemini API
 def process_image_to_document(file_path: str, client: genai.Client):
     """
     Uses the Gemini API to get a text description of an image, returning a Document object.
@@ -88,17 +88,7 @@ def generate_chunk_id(chunk_content: str, source_path: str, chunk_index: int) ->
     unique_key = f"{os.path.basename(source_path)}_{chunk_content}_c{chunk_index}"
     return hashlib.sha256(unique_key.encode('utf-8')).hexdigest()
 
-# Function to load and prepare documents with stable IDs (REFACTORED for multimodal)
-# rag_working.py
-
-# ... (keep all imports and configuration the same)
-
-# Function to load and prepare documents with stable IDs (REFACTORED for multimodal)
-# rag_working.py (Complete updated function)
-
-# ... (keep all imports and configuration the same)
-
-# Function to load and prepare documents with stable IDs (REFACTORED for multimodal)
+# Function to load and prepare documents with stable IDs
 def load_and_prepare_documents():
     all_files = glob("data/*")
     documents = []
@@ -233,21 +223,9 @@ def get_response(query):
             vectorstore = load_existing_vectorstore()
         except Exception:
             raise Exception("Vector store is not initialized. Please run rag_working.py directly once to index data.")
-        
-    # --- QUERY REWRITING LOGIC ---
-    original_query = query.lower()
-    
-    # Check for generic contact info queries and augment them
-    if "contact" in original_query:
-        print(f"DEBUG: Rewriting query '{query}' to include 'Tauqeer Ali Khan'.")
-        # Augment the query to include the explicit name for better retrieval
-        query_for_retrieval = f"Tauqeer Ali Khan's {query}" 
-    else:
-        query_for_retrieval = query
-    # --- END QUERY REWRITING LOGIC ---
 
     # Retrieve the top 5 most relevant documents
-    docs = vectorstore.similarity_search(query_for_retrieval, k=10)
+    docs = vectorstore.similarity_search(query, k=5)
     
     context = "\n---\n".join([doc.page_content for doc in docs])
     
